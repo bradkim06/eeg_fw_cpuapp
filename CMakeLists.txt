@@ -12,6 +12,4 @@ set(BOARD eeg_nrf5340_cpuapp)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(empty_app_core)
 
-# NORDIC SDK APP START
 target_sources(app PRIVATE src/main.c)
-# NORDIC SDK APP END
