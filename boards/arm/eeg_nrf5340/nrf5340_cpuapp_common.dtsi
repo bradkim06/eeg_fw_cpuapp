@@ -56,7 +56,7 @@
 	compatible = "nordic,nrf-spim";
 	status = "okay";
 	cs-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>, // ADS1299
-            <&gpio0 18 GPIO_ACTIVE_HIGH>; // BMI270
+            <&gpio0 26 GPIO_ACTIVE_HIGH>; // BMI270
 	pinctrl-0 = <&spi4_default>;
 	pinctrl-1 = <&spi4_sleep>;
 	pinctrl-names = "default", "sleep";
