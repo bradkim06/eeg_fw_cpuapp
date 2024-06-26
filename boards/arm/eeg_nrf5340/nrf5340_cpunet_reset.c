@@ -21,7 +21,8 @@ LOG_MODULE_REGISTER(eeg_nrf5340_cpuapp, CONFIG_LOG_DEFAULT_LEVEL);
 
 static void remoteproc_mgr_config(void)
 {
-#if !defined(CONFIG_TRUSTED_EXECUTION_NONSECURE) || defined(CONFIG_BUILD_WITH_TFM)
+#if !defined(CONFIG_TRUSTED_EXECUTION_NONSECURE) || \
+	defined(CONFIG_BUILD_WITH_TFM)
 	/* Route Bluetooth Controller Debug Pins */
 	DEBUG_SETUP();
 #endif /* !defined(CONFIG_TRUSTED_EXECUTION_NONSECURE) || defined(CONFIG_BUILD_WITH_TFM) */
@@ -36,7 +37,6 @@ static void remoteproc_mgr_config(void)
 
 static int remoteproc_mgr_boot(void)
 {
-
 	/* Secure domain may configure permissions for the Network MCU. */
 	remoteproc_mgr_config();
 
