@@ -52,27 +52,27 @@
 	pinctrl-names = "default", "sleep";
 };
 
-&spi4 {
+&spi3 {
 	compatible = "nordic,nrf-spim";
 	status = "okay";
-	cs-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>, // ADS1299
-            <&gpio0 26 GPIO_ACTIVE_HIGH>; // BMI270
-	pinctrl-0 = <&spi4_default>;
-	pinctrl-1 = <&spi4_sleep>;
+	pinctrl-0 = <&spi3_default>;
+	pinctrl-1 = <&spi3_sleep>;
 	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>,
+            <&gpio0 18 GPIO_ACTIVE_HIGH>;
 
-	// ads1299: ads1299@0 {
-	// 	compatible = "ti,ads1299";
-	// 	spi-max-frequency = <8000000>;
-	// 	reg = <0>;
-	// };
+	ads1299: ads1299@0 {
+		compatible = "ti,ads1299";
+        spi-max-frequency = <1000000>;
+		reg = <0>;
+	};
 
-	// bmi270: bmi270@1 {
-	// 	compatible = "bosch,bmi270";
-	// 	spi-max-frequency = <8000000>;
-	// 	reg = <0>;
-    //  int1-gpios = <&gpio0 23 0>;
-	// };
+	bmi270: bmi270@1 {
+		compatible = "bosch,bmi270";
+        spi-max-frequency = <1000000>;
+		reg = <1>;
+        // int1-gpios = <&gpio0 23 0>;
+	};
 };
 
 &flash0 {

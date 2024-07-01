@@ -1,0 +1,22 @@
+# ADS1299 driver options
+
+# Copyright (c) 2024 HHS
+
+menuconfig TI_ADS1299_DRIVER
+	bool "Support for the demonstration out of tree custom BME280 driver using SPI"
+	depends on SPI
+
+
+if TI_ADS1299_DRIVER
+
+source "subsys/logging/Kconfig.template.log_config"
+# STEP 3 - Add a custom driver initialization priority
+config DRIVER_INIT_PRIORITY
+	int "Init priority"
+	default 71
+	help
+	  Custom device driver initialization priority, needs be more higher than CONFIG_SPI_INIT_PRIORITY.
+
+
+endif
+

@@ -1,0 +1,8 @@
+# Copyright (c) 2024 HHS
+
+description: ADS1299 integrated environmental sensor
+
+compatible: "ti,ads1299"
+
+include: spi-device.yaml
+
