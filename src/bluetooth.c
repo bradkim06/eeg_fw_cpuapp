@@ -326,3 +326,91 @@ int bt_setup(void)
 }
 
 SYS_INIT(bt_setup, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
+
+/* Flag for transmitting only when notify is enabled. */
+static bool bt_notify_enable = false;
+
+/**
+ * @brief Callback function for Gas Sensor CCC (Client Characteristic Configuration) changes.
+ *
+ * This function is invoked when the CCC descriptor of the Gas Sensor characteristic is modified
+ * on the client side. It updates the notify_gas_enabled flag and posts a BLE_NOTIFY_EN event
+ * if notifications are enabled.
+ *
+ * @param attr The BT GATT attribute that has been changed.
+ * @param value The new value of the CCC descriptor.
+ */
+static void mylbsbc_ccc_gas_cfg_changed(const struct bt_gatt_attr *attr,
+					uint16_t value)
+{
+	/* Update the notify_gas_enabled flag */
+	bt_notify_enable = (value == BT_GATT_CCC_NOTIFY);
+
+	/* Log the change in the CCC descriptor */
+	LOG_INF("notify cfg changed %d", bt_notify_enable);
+}
+
+// Define a function to handle BLE (Bluetooth Low Energy) write operations.
+// This function is called when a BLE client writes to a characteristic on the BLE server.
+/**
+ * @brief GATT write callback in a Bluetooth stack
+ *
+ * @param conn A pointer to the BLE connection structure.
+ * @param attr A pointer to the GATT attribute that is being written to.
+ * @param buf A pointer to the buffer containing the data to be written.
+ * @param len The length of the data in the buffer.
+ * @param offset The offset at which the data should be written (used for long writes).
+ * @param flags Flags for the write operation (not used in this snippet).
+ * @return the length of the data written if the write operation is successful.
+ */
+static ssize_t write_ble(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+			 const void *buf, uint16_t len, uint16_t offset,
+			 uint8_t flags)
+{
+	// Log a debug message with the attribute handle and the connection pointer.
+	LOG_DBG("Attribute write, handle: %u, conn: %p", attr->handle,
+		(void *)conn);
+
+	// Return the number of bytes written to indicate success.
+	return len;
+}
+
+/* Service Declaration */
+BT_GATT_SERVICE_DEFINE(
+	bt_hhs_svc, BT_GATT_PRIMARY_SERVICE(BT_UUID_HHS),
+	BT_GATT_CHARACTERISTIC(BT_UUID_HHS_WRITE, BT_GATT_CHRC_WRITE,
+			       BT_GATT_PERM_WRITE, NULL, write_ble, NULL),
+	BT_GATT_CHARACTERISTIC(BT_UUID_HHS_NOTI, BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_NONE, NULL, NULL, NULL),
+	BT_GATT_CCC(mylbsbc_ccc_gas_cfg_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
+
+static int bt_notify(char *data)
+{
+	char log_string[sizeof("notify data of length: 999") + 1];
+	uint8_t data_length = strlen(data);
+
+	return bt_gatt_notify(NULL, &bt_hhs_svc.attrs[4], (void *)data,
+			      (size_t)data_length);
+}
+
+/**
+ * @brief Bluetooth thread function.
+ *
+ * This function is the entry point for the Bluetooth thread. It initializes the Bluetooth stack,
+ * starts advertising, and handles Bluetooth notifications. It also converts the firmware build time
+ * to the time_t format for adding it to the current kernel time (k_uptime_get()). It periodically
+ * sends notifications if a client is subscribed and gas sensor data is available. The function
+ * constructs the notification data, including gas sensor values, battery percentage, and, if
+ * enabled, environmental sensor data (temperature, pressure, humidity, IAQ, eCO2, and breath VOC).
+ *
+ * @note The function sends notifications only if a client is subscribed.
+ */
+static void bluetooth_thread(void)
+{
+}
+
+#define STACKSIZE 2048
+#define PRIORITY 0
+K_THREAD_DEFINE(bt_thread_id, STACKSIZE, bluetooth_thread, NULL, NULL, NULL,
+		PRIORITY, 0, 0);

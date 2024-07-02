@@ -184,13 +184,6 @@ static int init(const struct device *dev)
 		}
 	}
 
-	// Set CONFIG2: Test signal
-	err = write_reg(dev, CONFIG4_REG, 0x08);
-	if (err != 0) {
-		printk("Failed to set CONFIG2 register\n");
-		return err;
-	}
-
 	printk("---------- ADS1299 initial configuration completed successfully ----------\n");
 
 	return 0;
@@ -362,15 +355,12 @@ static int ads1299_command(const struct device *dev, uint8_t cmd)
 static int ads1299_read_data(const struct device *dev, uint8_t *data,
 			     size_t len)
 {
-	struct spi_buf tx_buf = { .buf = &(uint8_t){ RDATA }, .len = 1 };
-	struct spi_buf_set tx = { .buffers = &tx_buf, .count = 1 };
-
 	struct spi_buf rx_buf = { .buf = data, .len = len };
 	struct spi_buf_set rx = { .buffers = &rx_buf, .count = 1 };
 
 	const struct ti_ads1299_config *ads1299_config = dev->config;
 
-	return spi_transceive_dt(&ads1299_config->spi, &tx, &rx);
+	return spi_read_dt(&ads1299_config->spi, &rx);
 }
 
 static const struct ti_ads1299_driver_api ti_ads1299_api_funcs = {
