@@ -73,7 +73,7 @@
 		compatible = "ti,ads1299";
         spi-max-frequency = <1000000>;
 		reg = <0>;
-        drdy-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
+        drdy-gpios = <&gpio0 31 GPIO_ACTIVE_LOW>;
 	};
 
 	bmi270: bmi270@1 {

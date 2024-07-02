@@ -20,15 +20,15 @@ LOG_MODULE_REGISTER(EEG_MAIN, LOG_LEVEL_INF);
 
 const struct device *ads1299_spi_dev = DEVICE_DT_GET(DT_NODELABEL(ads1299));
 
+static K_SEM_DEFINE(drdy_sem, 0, 1);
 static struct gpio_callback drdy_cb_data;
 
 // DRDY 인터럽트 핸들러
 static void drdy_handler(const struct device *dev, struct gpio_callback *cb,
 			 uint32_t pins)
 {
-	printk("DRDY interrupt triggered\n");
-	// 여기에 데이터 읽기 로직을 구현합니다.
-	// 예: SPI를 통해 ADS1299에서 데이터 읽기
+	printk("drdy int\n");
+	k_sem_give(&drdy_sem);
 }
 
 static int ads1299_init(void)
@@ -87,6 +87,27 @@ int main(void)
 	ads1299_init();
 
 	ti_ads1299_config(ads1299_spi_dev);
+
+	uint8_t data[15]; // 3 bytes status + 12 bytes data (4 channels * 3 bytes per channel)
+	while (1) {
+#define START 0x08
+		ti_ads1299_command(ads1299_spi_dev, START);
+		k_sem_take(&drdy_sem, K_FOREVER);
+		printk("data read\n");
+
+		if (ti_ads1299_read_data(ads1299_spi_dev, data, sizeof(data)) ==
+		    0) {
+			printk("Data read: ");
+			for (int i = 0; i < sizeof(data); i++) {
+				printk("%02X ", data[i]);
+			}
+			printk("\n");
+		} else {
+			printk("Error reading data from ADS1299\n");
+		}
+
+		k_msleep(10000);
+	}
 
 	return 0;
 }

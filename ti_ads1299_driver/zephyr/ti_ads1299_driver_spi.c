@@ -184,6 +184,13 @@ static int init(const struct device *dev)
 		}
 	}
 
+	// Set CONFIG2: Test signal
+	err = write_reg(dev, CONFIG4_REG, 0x08);
+	if (err != 0) {
+		printk("Failed to set CONFIG2 register\n");
+		return err;
+	}
+
 	printk("---------- ADS1299 initial configuration completed successfully ----------\n");
 
 	return 0;
@@ -191,20 +198,13 @@ static int init(const struct device *dev)
 
 static void ads1299_config_print(const struct device *dev)
 {
-	// SDATAC 명령 전송
-	int err = send_command(dev, SDATAC);
-	if (err != 0) {
-		printk("Failed to send SDATAC command, err: %d\n", err);
-		return;
-	}
-
 	printk("---------- Print all characteristics of ADS1299 sensor ----------\n");
 
 	printk("ADS1299 Settings:\n");
 
 	uint8_t reg_value;
 	// ID 레지스터 읽기
-	err = read_reg(dev, ID_REG, &reg_value);
+	int err = read_reg(dev, ID_REG, &reg_value);
 	if (err == 0) {
 		printk("ID (0x00): 0x%02X\n", reg_value);
 		printk("  - Device: ADS%d\n",
@@ -336,8 +336,49 @@ static void ads1299_config_print(const struct device *dev)
 	}
 }
 
+static int ads1299_read_reg(const struct device *dev, uint8_t reg,
+			    uint8_t *value)
+{
+	printk("Read to a given register of ADS1299\n");
+
+	return read_reg(dev, reg, value);
+}
+
+static int ads1299_write_reg(const struct device *dev, uint8_t reg,
+			     uint8_t value)
+{
+	printk("Write to a given register of ADS1299\n");
+
+	return write_reg(dev, reg, value);
+}
+
+static int ads1299_command(const struct device *dev, uint8_t cmd)
+{
+	printk("Send command to ADS1299\n");
+
+	return send_command(dev, cmd);
+}
+
+static int ads1299_read_data(const struct device *dev, uint8_t *data,
+			     size_t len)
+{
+	struct spi_buf tx_buf = { .buf = &(uint8_t){ RDATA }, .len = 1 };
+	struct spi_buf_set tx = { .buffers = &tx_buf, .count = 1 };
+
+	struct spi_buf rx_buf = { .buf = data, .len = len };
+	struct spi_buf_set rx = { .buffers = &rx_buf, .count = 1 };
+
+	const struct ti_ads1299_config *ads1299_config = dev->config;
+
+	return spi_transceive_dt(&ads1299_config->spi, &tx, &rx);
+}
+
 static const struct ti_ads1299_driver_api ti_ads1299_api_funcs = {
 	.config = ads1299_config_print,
+	.read_reg = ads1299_read_reg,
+	.write_reg = ads1299_write_reg,
+	.command = ads1299_command,
+	.read_data = ads1299_read_data,
 };
 
 /* Initializes a struct ads1299_config for an instance on a SPI bus. */
