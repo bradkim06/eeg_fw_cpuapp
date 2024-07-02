@@ -24,12 +24,20 @@
 	};
 };
 
+
 &gpiote {
 	status = "okay";
 };
 
 &gpio0 {
 	status = "okay";
+
+	ads1299-start {
+		gpio-hog;
+		gpios = <8 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "ads1299 start pin";
+	};
 };
 
 &gpio1 {
@@ -65,6 +73,7 @@
 		compatible = "ti,ads1299";
         spi-max-frequency = <1000000>;
 		reg = <0>;
+        drdy-gpios = <&gpio0 15 GPIO_ACTIVE_LOW>;
 	};
 
 	bmi270: bmi270@1 {

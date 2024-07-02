@@ -1,8 +1,17 @@
 # Copyright (c) 2024 HHS
-
-description: ADS1299 integrated environmental sensor
+description: Texas Instruments ADS1299 Analog-to-Digital Converter
 
 compatible: "ti,ads1299"
 
 include: spi-device.yaml
 
+properties:
+  drdy-gpios:
+    type: phandle-array
+    required: true
+    description: Data Ready pin
+
+  start-gpios:
+    type: phandle-array
+    required: false
+    description: Start pin
