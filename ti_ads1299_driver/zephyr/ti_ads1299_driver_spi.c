@@ -190,10 +190,7 @@ static int init(const struct device *dev)
 	}
 
 	// Set CONFIG2: Test signal
-	err = write_reg(dev, CONFIG2_REG,
-			ADS1299_REG_CONFIG2_RESERVED_VALUE |
-				ADS1299_REG_CONFIG2_CAL_INT |
-				ADS1299_REG_CONFIG2_CAL_PULSE_FCLK_DIV_2_21);
+	err = write_reg(dev, CONFIG2_REG, ADS1299_REG_CONFIG2_RESERVED_VALUE);
 	if (err != 0) {
 		printk("Failed to set CONFIG2 register\n");
 		return err;
@@ -274,6 +271,54 @@ static int init(const struct device *dev)
 	return 0;
 }
 
+// 게인 값을 문자열로 변환
+const char *gain_to_string(uint8_t gain)
+{
+	switch (gain) {
+	case 0:
+		return "1x";
+	case 1:
+		return "2x";
+	case 2:
+		return "4x";
+	case 3:
+		return "6x";
+	case 4:
+		return "8x";
+	case 5:
+		return "12x";
+	case 6:
+		return "24x";
+	default:
+		return "Invalid";
+	}
+}
+
+// 입력 멀티플렉서 설정을 문자열로 변환
+const char *mux_to_string(uint8_t mux)
+{
+	switch (mux) {
+	case 0:
+		return "Normal electrode input";
+	case 1:
+		return "Input shorted";
+	case 2:
+		return "Bias measurement";
+	case 3:
+		return "MVDD supply";
+	case 4:
+		return "Temperature sensor";
+	case 5:
+		return "Test signal";
+	case 6:
+		return "BIAS_DRP";
+	case 7:
+		return "BIAS_DRN";
+	default:
+		return "Invalid";
+	}
+}
+
 static void ads1299_config_print(const struct device *dev)
 {
 	printk("---------- Print all characteristics of ADS1299 sensor ----------\n");
@@ -318,26 +363,32 @@ static void ads1299_config_print(const struct device *dev)
 		printk("  - Internal reference buffer: %s\n",
 		       (reg_value & 0x80) ? "Enabled" : "Disabled");
 		printk("  - Bias measurement: %s\n",
-		       (reg_value & 0x40) ? "Enabled" : "Disabled");
-		printk("  - Bias reference: %s\n",
-		       (reg_value & 0x20) ? "Internal" : "External");
-		printk("  - Bias buffer: %s\n",
 		       (reg_value & 0x10) ? "Enabled" : "Disabled");
+		printk("  - Bias reference: %s\n",
+		       (reg_value & 0x08) ? "Internal" : "External");
+		printk("  - Bias buffer power: %s\n",
+		       (reg_value & 0x04) ? "Enabled" : "Disabled");
+		printk("  - Bias sense function: %s\n",
+		       (reg_value & 0x02) ? "Enabled" : "Disabled");
+		printk("  - Bias lead-off status: %s\n",
+		       (reg_value & 0x01) ? "Not connected" : "Connected");
 	}
 	k_msleep(DELAY_PARAM);
 
 	// 채널 설정 읽기
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < 4; i++) {
 		err = read_reg(dev, CH1SET_REG + i, &reg_value);
 		if (err == 0) {
 			printk("CH%dSET (0x%02X): 0x%02X\n", i + 1,
 			       CH1SET_REG + i, reg_value);
-			printk("  - PGA gain: %dV/V\n",
-			       1 << (reg_value & 0x07));
 			printk("  - Channel power: %s\n",
-			       (reg_value & 0x80) ? "Normal" : "Power-down");
+			       (reg_value & 0x80) ? "Power-down" : "Normal");
+			printk("  - Gain: %s\n",
+			       gain_to_string((reg_value & 0x70) >> 4));
 			printk("  - SRB2 connection: %s\n",
 			       (reg_value & 0x08) ? "Closed" : "Open");
+			printk("  - Input Multiplexer: %s\n",
+			       mux_to_string(reg_value & 0x07));
 		}
 		k_msleep(DELAY_PARAM);
 	}
@@ -346,7 +397,7 @@ static void ads1299_config_print(const struct device *dev)
 	err = read_reg(dev, BIAS_SENSP_REG, &reg_value);
 	if (err == 0) {
 		printk("BIAS_SENSP (0x0D): 0x%02X\n", reg_value);
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < 4; i++) {
 			printk("  - Channel %d bias: %s\n", i + 1,
 			       (reg_value & (1 << i)) ? "Enabled" : "Disabled");
 			k_msleep(DELAY_PARAM);
@@ -357,7 +408,7 @@ static void ads1299_config_print(const struct device *dev)
 	err = read_reg(dev, BIAS_SENSN_REG, &reg_value);
 	if (err == 0) {
 		printk("BIAS_SENSN (0x0E): 0x%02X\n", reg_value);
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < 4; i++) {
 			printk("  - Channel %d bias: %s\n", i + 1,
 			       (reg_value & (1 << i)) ? "Enabled" : "Disabled");
 			k_msleep(DELAY_PARAM);
@@ -368,7 +419,7 @@ static void ads1299_config_print(const struct device *dev)
 	err = read_reg(dev, LOFF_SENSP_REG, &reg_value);
 	if (err == 0) {
 		printk("LOFF_SENSP (0x0F): 0x%02X\n", reg_value);
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < 4; i++) {
 			printk("  - Channel %d lead-off detection P: %s\n",
 			       i + 1,
 			       (reg_value & (1 << i)) ? "Enabled" : "Disabled");
@@ -380,7 +431,7 @@ static void ads1299_config_print(const struct device *dev)
 	err = read_reg(dev, LOFF_SENSN_REG, &reg_value);
 	if (err == 0) {
 		printk("LOFF_SENSN (0x10): 0x%02X\n", reg_value);
-		for (int i = 0; i < 8; i++) {
+		for (int i = 0; i < 4; i++) {
 			printk("  - Channel %d lead-off detection N: %s\n",
 			       i + 1,
 			       (reg_value & (1 << i)) ? "Enabled" : "Disabled");
@@ -407,10 +458,11 @@ static void ads1299_config_print(const struct device *dev)
 	err = read_reg(dev, CONFIG4_REG, &reg_value);
 	if (err == 0) {
 		printk("CONFIG4 (0x17): 0x%02X\n", reg_value);
-		printk("  - Lead-off comparator threshold: %d\n",
-		       (reg_value & 0x03));
-		printk("  - Lead-off current magnitude: %d\n",
-		       ((reg_value >> 2) & 0x03));
+		printk("  - Single Shot: %s\n", (reg_value & 0x08) ?
+							"Continuous mode" :
+							"Single-shot mode");
+		printk("  - Lead-off comparator power-down: %s\n",
+		       (reg_value & 0x02) ? "Disabled" : "Enabled");
 	}
 }
 
