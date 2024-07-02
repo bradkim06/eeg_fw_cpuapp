@@ -150,8 +150,27 @@ static int init(const struct device *dev)
 		return err;
 	}
 
+	/* Write to GPIO register, set all pins to driven-low output */
+	err = write_reg(dev, GPIO_REG,
+			ADS1299_REG_GPIO_GPIOC4_OUTPUT |
+				ADS1299_REG_GPIO_GPIOD4_LOW |
+				ADS1299_REG_GPIO_GPIOC3_OUTPUT |
+				ADS1299_REG_GPIO_GPIOD3_LOW |
+				ADS1299_REG_GPIO_GPIOC2_OUTPUT |
+				ADS1299_REG_GPIO_GPIOD2_LOW |
+				ADS1299_REG_GPIO_GPIOC1_OUTPUT |
+				ADS1299_REG_GPIO_GPIOD1_LOW);
+	if (err != 0) {
+		printk("Failed to set CONFIG3 register\n");
+		return err;
+	}
+
 	// 2. Enable internal reference buffer, BIASREF_INT=1
-	err = write_reg(dev, CONFIG3_REG, 0xE8);
+	err = write_reg(dev, CONFIG3_REG,
+			ADS1299_REG_CONFIG3_REFBUF_ENABLED |
+				ADS1299_REG_CONFIG3_RESERVED_VALUE |
+				ADS1299_REG_CONFIG3_BIASREF_INT |
+				ADS1299_REG_CONFIG3_BIASBUF_ENABLED);
 	if (err != 0) {
 		printk("Failed to set CONFIG3 register\n");
 		return err;
@@ -162,26 +181,92 @@ static int init(const struct device *dev)
 
 	// 4. Configure device
 	// Set CONFIG1: DR = fMOD/4096
-	err = write_reg(dev, CONFIG1_REG, 0x96);
+	err = write_reg(dev, CONFIG1_REG,
+			ADS1299_REG_CONFIG1_RESERVED_VALUE |
+				ADS1299_REG_CONFIG1_FMOD_DIV_BY_4096);
 	if (err != 0) {
 		printk("Failed to set CONFIG1 register\n");
 		return err;
 	}
 
 	// Set CONFIG2: Test signal
-	err = write_reg(dev, CONFIG2_REG, 0xC0);
+	err = write_reg(dev, CONFIG2_REG,
+			ADS1299_REG_CONFIG2_RESERVED_VALUE |
+				ADS1299_REG_CONFIG2_CAL_INT |
+				ADS1299_REG_CONFIG2_CAL_PULSE_FCLK_DIV_2_21);
 	if (err != 0) {
 		printk("Failed to set CONFIG2 register\n");
 		return err;
 	}
 
-	// Set All Channels to Input Short
+	// Set All Channels
 	for (int i = 0; i < 4; i++) {
-		err = write_reg(dev, CH1SET_REG + i, 0x01);
+		err = write_reg(dev, CH1SET_REG + i,
+				ADS1299_REG_CHNSET_CHANNEL_ON |
+					ADS1299_REG_CHNSET_GAIN_24 |
+					ADS1299_REG_CHNSET_SRB2_DISCONNECTED |
+					ADS1299_REG_CHNSET_NORMAL_ELECTRODE);
 		if (err != 0) {
 			printk("Failed to set CH%dSET register\n", i + 1);
 			return err;
 		}
+	}
+
+	// Set BIASP
+	err = write_reg(dev, BIAS_SENSP_REG,
+			ADS1299_REG_BIAS_SENSP_BIASP4 |
+				ADS1299_REG_BIAS_SENSP_BIASP3 |
+				ADS1299_REG_BIAS_SENSP_BIASP2 |
+				ADS1299_REG_BIAS_SENSP_BIASP1);
+	if (err != 0) {
+		printk("Failed to set BIAS_SENSP register\n");
+		return err;
+	}
+
+	// // Set BIASN
+	// err = write_reg(dev, BIAS_SENSN_REG,
+	// 		ADS1299_REG_BIAS_SENSN_BIASN4 |
+	// 			ADS1299_REG_BIAS_SENSN_BIASN3 |
+	// 			ADS1299_REG_BIAS_SENSN_BIASN2 |
+	// 			ADS1299_REG_BIAS_SENSN_BIASN1);
+	// if (err != 0) {
+	// 	printk("Failed to set BIAS_SENSN register\n");
+	// 	return err;
+	// }
+
+	// Lead-Off dc
+	err = write_reg(dev, LOFF_REG,
+			ADS1299_REG_LOFF_95_PERCENT |
+				ADS1299_REG_LOFF_DC_LEAD_OFF);
+	if (err != 0) {
+		printk("Failed to set LOFF register\n");
+		return err;
+	}
+
+	err = write_reg(dev, CONFIG4_REG, ADS1299_REG_CONFIG4_LEAD_OFF_ENABLED);
+	if (err != 0) {
+		printk("Failed to set CONFIG4 register\n");
+		return err;
+	}
+
+	err = write_reg(dev, LOFF_SENSP_REG,
+			ADS1299_REG_LOFF_SENSP_LOFFP4 |
+				ADS1299_REG_LOFF_SENSP_LOFFP3 |
+				ADS1299_REG_LOFF_SENSP_LOFFP2 |
+				ADS1299_REG_LOFF_SENSP_LOFFP1);
+	if (err != 0) {
+		printk("Failed to set LOFF_SENSP register\n");
+		return err;
+	}
+
+	err = write_reg(dev, LOFF_SENSN_REG,
+			ADS1299_REG_LOFF_SENSN_LOFFN4 |
+				ADS1299_REG_LOFF_SENSN_LOFFN3 |
+				ADS1299_REG_LOFF_SENSN_LOFFN2 |
+				ADS1299_REG_LOFF_SENSN_LOFFN1);
+	if (err != 0) {
+		printk("Failed to set LOFF_SENSN register\n");
+		return err;
 	}
 
 	printk("---------- ADS1299 initial configuration completed successfully ----------\n");
@@ -308,13 +393,13 @@ static void ads1299_config_print(const struct device *dev)
 	if (err == 0) {
 		printk("GPIO (0x14): 0x%02X\n", reg_value);
 		printk("  - GPIO1 direction: %s\n",
-		       (reg_value & 0x01) ? "Output" : "Input");
+		       (reg_value & 0x01) ? "Input" : "Output");
 		printk("  - GPIO2 direction: %s\n",
-		       (reg_value & 0x02) ? "Output" : "Input");
+		       (reg_value & 0x02) ? "Input" : "Output");
 		printk("  - GPIO3 direction: %s\n",
-		       (reg_value & 0x04) ? "Output" : "Input");
+		       (reg_value & 0x04) ? "Input" : "Output");
 		printk("  - GPIO4 direction: %s\n",
-		       (reg_value & 0x08) ? "Output" : "Input");
+		       (reg_value & 0x08) ? "Input" : "Output");
 	}
 	k_msleep(DELAY_PARAM);
 
