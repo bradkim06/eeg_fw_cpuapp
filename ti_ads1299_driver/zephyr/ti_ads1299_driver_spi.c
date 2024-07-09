@@ -86,6 +86,7 @@ static int write_reg(const struct device *dev, uint8_t reg, uint8_t value)
 		printk("SPI write failed");
 		return -EIO;
 	}
+	k_msleep(DELAY_REG);
 
 	return 0;
 }
@@ -169,8 +170,8 @@ static int init(const struct device *dev)
 	err = write_reg(dev, CONFIG3_REG,
 			ADS1299_REG_CONFIG3_REFBUF_ENABLED |
 				ADS1299_REG_CONFIG3_RESERVED_VALUE |
-				ADS1299_REG_CONFIG3_BIASREF_INT |
-				ADS1299_REG_CONFIG3_BIASBUF_ENABLED);
+				ADS1299_REG_CONFIG3_BIASBUF_ENABLED |
+				ADS1299_REG_CONFIG3_BIASREF_INT);
 	if (err != 0) {
 		printk("Failed to set CONFIG3 register\n");
 		return err;
@@ -197,11 +198,10 @@ static int init(const struct device *dev)
 	}
 
 	// Set All Channels
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 2; i++) {
 		err = write_reg(dev, CH1SET_REG + i,
 				ADS1299_REG_CHNSET_CHANNEL_ON |
 					ADS1299_REG_CHNSET_GAIN_24 |
-					ADS1299_REG_CHNSET_SRB2_DISCONNECTED |
 					ADS1299_REG_CHNSET_NORMAL_ELECTRODE);
 		if (err != 0) {
 			printk("Failed to set CH%dSET register\n", i + 1);
@@ -211,25 +211,21 @@ static int init(const struct device *dev)
 
 	// Set BIASP
 	err = write_reg(dev, BIAS_SENSP_REG,
-			ADS1299_REG_BIAS_SENSP_BIASP4 |
-				ADS1299_REG_BIAS_SENSP_BIASP3 |
-				ADS1299_REG_BIAS_SENSP_BIASP2 |
+			ADS1299_REG_BIAS_SENSP_BIASP2 |
 				ADS1299_REG_BIAS_SENSP_BIASP1);
 	if (err != 0) {
 		printk("Failed to set BIAS_SENSP register\n");
 		return err;
 	}
 
-	// // Set BIASN
-	// err = write_reg(dev, BIAS_SENSN_REG,
-	// 		ADS1299_REG_BIAS_SENSN_BIASN4 |
-	// 			ADS1299_REG_BIAS_SENSN_BIASN3 |
-	// 			ADS1299_REG_BIAS_SENSN_BIASN2 |
-	// 			ADS1299_REG_BIAS_SENSN_BIASN1);
-	// if (err != 0) {
-	// 	printk("Failed to set BIAS_SENSN register\n");
-	// 	return err;
-	// }
+	// Set BIASN
+	err = write_reg(dev, BIAS_SENSN_REG,
+			ADS1299_REG_BIAS_SENSN_BIASN2 |
+				ADS1299_REG_BIAS_SENSN_BIASN1);
+	if (err != 0) {
+		printk("Failed to set BIAS_SENSN register\n");
+		return err;
+	}
 
 	// Lead-Off dc
 	err = write_reg(dev, LOFF_REG,
@@ -240,16 +236,16 @@ static int init(const struct device *dev)
 		return err;
 	}
 
-	err = write_reg(dev, CONFIG4_REG, ADS1299_REG_CONFIG4_LEAD_OFF_ENABLED);
+	err = write_reg(dev, CONFIG4_REG,
+			ADS1299_REG_CONFIG4_CONTINUOUS_CONVERSION_MODE |
+				ADS1299_REG_CONFIG4_LEAD_OFF_ENABLED);
 	if (err != 0) {
 		printk("Failed to set CONFIG4 register\n");
 		return err;
 	}
 
 	err = write_reg(dev, LOFF_SENSP_REG,
-			ADS1299_REG_LOFF_SENSP_LOFFP4 |
-				ADS1299_REG_LOFF_SENSP_LOFFP3 |
-				ADS1299_REG_LOFF_SENSP_LOFFP2 |
+			ADS1299_REG_LOFF_SENSP_LOFFP2 |
 				ADS1299_REG_LOFF_SENSP_LOFFP1);
 	if (err != 0) {
 		printk("Failed to set LOFF_SENSP register\n");
@@ -257,9 +253,7 @@ static int init(const struct device *dev)
 	}
 
 	err = write_reg(dev, LOFF_SENSN_REG,
-			ADS1299_REG_LOFF_SENSN_LOFFN4 |
-				ADS1299_REG_LOFF_SENSN_LOFFN3 |
-				ADS1299_REG_LOFF_SENSN_LOFFN2 |
+			ADS1299_REG_LOFF_SENSN_LOFFN2 |
 				ADS1299_REG_LOFF_SENSN_LOFFN1);
 	if (err != 0) {
 		printk("Failed to set LOFF_SENSN register\n");
@@ -459,10 +453,10 @@ static void ads1299_config_print(const struct device *dev)
 	if (err == 0) {
 		printk("CONFIG4 (0x17): 0x%02X\n", reg_value);
 		printk("  - Single Shot: %s\n", (reg_value & 0x08) ?
-							"Continuous mode" :
-							"Single-shot mode");
+							"Single-shot mode" :
+							"Continuous mode");
 		printk("  - Lead-off comparator power-down: %s\n",
-		       (reg_value & 0x02) ? "Disabled" : "Enabled");
+		       (reg_value & 0x02) ? "Enabled" : "Disabled");
 	}
 }
 

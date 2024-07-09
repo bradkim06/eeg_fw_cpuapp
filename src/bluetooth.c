@@ -11,7 +11,9 @@
  * @author bradkim06@gmail.com
  */
 #include "bluetooth.h"
+#include "eeg.h"
 
+#include <zephyr/kernel.h>
 #include <zephyr/bluetooth/addr.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
@@ -20,6 +22,9 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/logging/log.h>
+
+/* Structure for generating a BLE notify event (kernel API). */
+struct k_event bt_event;
 
 /* Registers the HHS_BT module with the specified log level. */
 LOG_MODULE_REGISTER(HHS_BT, CONFIG_APP_LOG_LEVEL);
@@ -322,6 +327,8 @@ int bt_setup(void)
 
 	LOG_INF("Advertising successfully started");
 
+	k_event_init(&bt_event);
+
 	return 0;
 }
 
@@ -387,12 +394,14 @@ BT_GATT_SERVICE_DEFINE(
 
 static int bt_notify(char *data)
 {
-	char log_string[sizeof("notify data of length: 999") + 1];
-	uint8_t data_length = strlen(data);
+	uint8_t data_length = 3;
+	LOG_HEXDUMP_INF(data, data_length, "notify");
 
 	return bt_gatt_notify(NULL, &bt_hhs_svc.attrs[4], (void *)data,
 			      (size_t)data_length);
 }
+
+extern uint8_t data[15];
 
 /**
  * @brief Bluetooth thread function.
@@ -408,6 +417,19 @@ static int bt_notify(char *data)
  */
 static void bluetooth_thread(void)
 {
+	while (1) {
+		k_msleep(1000);
+		// uint32_t bluetooth_events =
+		// 	k_event_wait(&bt_event, bt_tx_event_sum, true,
+		// 		     K_SECONDS(TIMEOUT_SEC));
+		//
+		// /* Check if gas notification is enabled */
+		// if (!bt_notify_enable) {
+		// 	continue;
+		// }
+		//
+		// bt_notify(&data[3]);
+	}
 }
 
 #define STACKSIZE 2048
