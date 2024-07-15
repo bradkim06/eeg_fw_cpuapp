@@ -1,17 +1,10 @@
-/*
- * Copyright (c) 2020 Nordic Semiconductor ASA
- *
- * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
- */
-
-#include <stdio.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(EEG_MAIN, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(MAIN, CONFIG_APP_LOG_LEVEL);
 
 int main(void)
 {
-	LOG_INF("Hello World! %s\n", CONFIG_BOARD);
-
+	LOG_INF("Hello Main");
 	return 0;
 }

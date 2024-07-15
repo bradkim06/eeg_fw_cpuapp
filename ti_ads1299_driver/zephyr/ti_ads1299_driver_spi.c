@@ -202,7 +202,7 @@ static int init(const struct device *dev)
 		err = write_reg(dev, CH1SET_REG + i,
 				ADS1299_REG_CHNSET_CHANNEL_ON |
 					ADS1299_REG_CHNSET_GAIN_24 |
-					ADS1299_REG_CHNSET_NORMAL_ELECTRODE);
+					ADS1299_REG_CHNSET_INPUT_SHORTED);
 		if (err != 0) {
 			printk("Failed to set CH%dSET register\n", i + 1);
 			return err;
@@ -219,9 +219,7 @@ static int init(const struct device *dev)
 	}
 
 	// Set BIASN
-	err = write_reg(dev, BIAS_SENSN_REG,
-			ADS1299_REG_BIAS_SENSN_BIASN2 |
-				ADS1299_REG_BIAS_SENSN_BIASN1);
+	err = write_reg(dev, BIAS_SENSN_REG, ADS1299_REG_BIAS_SENSN_BIASN1);
 	if (err != 0) {
 		printk("Failed to set BIAS_SENSN register\n");
 		return err;
