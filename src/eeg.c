@@ -14,6 +14,11 @@
 
 LOG_MODULE_REGISTER(EEG, CONFIG_APP_LOG_LEVEL);
 
+// ADS1299 관련 상수
+const float VREF = 4.5f; // 기준 전압 (V)
+const int GAIN = 24; // PGA 게인
+const int RESOLUTION = 24; // ADC 해상도 (비트)
+
 const struct device *ads1299_spi_dev = DEVICE_DT_GET(DT_NODELABEL(ads1299));
 
 static K_SEM_DEFINE(drdy_sem, 0, 1);
@@ -77,29 +82,32 @@ static int ads1299_init(void)
 	return 0;
 }
 
-float32_t adc_to_voltage(int32_t adc_code)
+// float32_t adc_to_voltage(int32_t adc_code)
+// {
+//
+// 	// 2의 보수 형태의 ADC 코드를 부호 있는 정수로 변환
+// 	if (adc_code > 0x7FFFFF) {
+// 		adc_code -= 0x1000000;
+// 	}
+//
+// 	// 전압 계산 (오버플로우 방지를 위해 순서 조정)
+// 	float32_t voltage = ((float32_t)adc_code * VREF) / (float32_t)GAIN;
+// 	voltage /= (float32_t)(1 << (RESOLUTION - 1));
+//
+// 	return voltage;
+// }
+
+// ADS1299에서 읽은 24비트 ADC 값을 실제 전압으로 변환하는 함수
+float32_t adc_to_voltage(int32_t adc_value)
 {
-	// ADS1299 관련 상수
-	const float VREF = 4.5f; // 기준 전압 (V)
-	const int GAIN = 24; // PGA 게인
-	const int RESOLUTION = 24; // ADC 해상도 (비트)
-	const int32_t MAX_CODE = (1 << (RESOLUTION - 1)) - 1;
-	const int32_t MIN_CODE = -(1 << (RESOLUTION - 1));
-
-	// 입력 값 유효성 검사
-	if (adc_code > MAX_CODE || adc_code < MIN_CODE) {
-		// 에러 처리 (예: 로그 기록, 기본값 반환 등)
-		return 0.0f;
+	// ADC 값이 24비트 2의 보수 형식이므로, 부호 확장
+	if (adc_value & 0x800000) {
+		adc_value |= 0xFF000000;
 	}
 
-	// 2의 보수 형태의 ADC 코드를 부호 있는 정수로 변환
-	if (adc_code > 0x7FFFFF) {
-		adc_code -= 0x1000000;
-	}
-
-	// 전압 계산 (오버플로우 방지를 위해 순서 조정)
-	float32_t voltage = ((float32_t)adc_code * VREF) / (float32_t)GAIN;
-	voltage /= (float32_t)(1 << (RESOLUTION - 1));
+	// ADC 값을 전압으로 변환
+	float32_t voltage =
+		(float32_t)adc_value * (2 * VREF) / (pow(2, 23) - 1) / GAIN;
 
 	return voltage;
 }
@@ -113,7 +121,7 @@ void process_and_print_data(const uint8_t *data, size_t size)
 				data[3 * channel + 5];
 
 		float32_t volt = adc_to_voltage(value);
-		filteringEEGData(&volt, &voltage[channel], 1);
+		voltage[channel] = filteringEEGData(volt, channel);
 	}
 
 	printk("%f\n", voltage[0]);

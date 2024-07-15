@@ -5,6 +5,6 @@
 #include <arm_math.h>
 #include <arm_const_structs.h>
 
-void filteringEEGData(float32_t *input, float32_t *output, uint32_t blockSize);
+float32_t filteringEEGData(float32_t input, int channel);
 
 #endif

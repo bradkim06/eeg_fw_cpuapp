@@ -72,7 +72,7 @@
 
 	ads1299: ads1299@0 {
 		compatible = "ti,ads1299";
-        spi-max-frequency = <1000000>;
+		spi-max-frequency = <DT_FREQ_M(1)>;
 		reg = <0>;
         drdy-gpios = <&gpio0 31 GPIO_ACTIVE_LOW>;
 	};
